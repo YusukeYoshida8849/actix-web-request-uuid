@@ -41,7 +41,7 @@ jobs:
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
-          command: test --lib --tests
+          command: test
 
   lints:
     name: Lints

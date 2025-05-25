@@ -5,7 +5,7 @@
 //!
 //! # Usage Example
 //!
-//! ```rust
+//! ```rust,no_run
 //! use actix_web::{App, HttpServer, web};
 //! use actix_web_request_uuid::RequestIDMiddleware;
 //!
