@@ -8,7 +8,7 @@ readme = "README.md"
 repository = "https://github.com/YusukeYoshida8849/actix-web-request-uuid"
 homepage = "https://github.com/YusukeYoshida8849/actix-web-request-uuid"
 documentation = "https://docs.rs/actix-web-request-uuid"
-keywords = ["actix", "actix-web", "web", "middleware", "request-id", "uuid"]
+keywords = ["actix", "actix-web", "middleware", "request-id", "uuid"]
 edition = "2021"
 
 [badges]
