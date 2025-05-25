@@ -13,7 +13,7 @@
 //! async fn main() -> std::io::Result<()> {
 //!     HttpServer::new(|| {
 //!         App::new()
-//!             .wrap(RequestIDMiddleware::new(36))
+//!             .wrap(RequestIDMiddleware::new())
 //!             .service(web::resource("/").to(|| async { "Hello world!" }))
 //!     })
 //!     .bind("127.0.0.1:8080")?
@@ -194,33 +194,44 @@ pub struct RequestIDMiddleware {
 
 impl Default for RequestIDMiddleware {
     fn default() -> Self {
-        Self::new(DEFAULT_ID_LENGTH)
+        Self::new()
     }
 }
 
 impl RequestIDMiddleware {
-    /// Create middleware that generates IDs of the specified length
+    /// Create middleware with default ID length (36 characters)
+    pub fn new() -> Self {
+        Self {
+            generator: Arc::new(|| Uuid::new_v4().to_string()),
+            header_name: REQUEST_ID_HEADER.to_string(),
+            id_length: DEFAULT_ID_LENGTH,
+        }
+    }
+
+    /// Set custom ID length
+    ///
+    /// # Arguments
+    ///
+    /// * `length` - The desired length of the request ID
     ///
     /// # Panics
     ///
-    /// Panics if `id_length` is 0 or less.
-    pub fn new(id_length: usize) -> Self {
-        if id_length == 0 {
+    /// Panics if `length` is 0.
+    pub fn with_id_length(mut self, length: usize) -> Self {
+        if length == 0 {
             panic!("Request ID length must be greater than 0");
         }
 
-        Self {
-            generator: Arc::new(move || {
-                let uuid = Uuid::new_v4().to_string();
-                if id_length >= uuid.len() {
-                    uuid
-                } else {
-                    uuid[..id_length].to_string()
-                }
-            }),
-            header_name: REQUEST_ID_HEADER.to_string(),
-            id_length,
-        }
+        self.id_length = length;
+        self.generator = Arc::new(move || {
+            let uuid = Uuid::new_v4().to_string();
+            if length >= uuid.len() {
+                uuid
+            } else {
+                uuid[..length].to_string()
+            }
+        });
+        self
     }
 
     /// Set a custom ID generation function
@@ -411,7 +422,7 @@ mod lib_actix_web_request_uuid_tests {
         let id_length = 16;
         let app = test::init_service(
             App::new()
-                .wrap(RequestIDMiddleware::new(id_length))
+                .wrap(RequestIDMiddleware::new().with_id_length(id_length))
                 .service(web::resource("/").to(|| async { HttpResponse::Ok().finish() })),
         )
         .await;
@@ -434,7 +445,7 @@ mod lib_actix_web_request_uuid_tests {
     async fn test_full_uuid_format() {
         let app = test::init_service(
             App::new()
-                .wrap(RequestIDMiddleware::new(36).with_full_uuid())
+                .wrap(RequestIDMiddleware::new().with_full_uuid())
                 .service(web::resource("/").to(|| async { HttpResponse::Ok().finish() })),
         )
         .await;
@@ -457,7 +468,7 @@ mod lib_actix_web_request_uuid_tests {
     async fn test_simple_uuid_format() {
         let app = test::init_service(
             App::new()
-                .wrap(RequestIDMiddleware::new(32).with_simple_uuid())
+                .wrap(RequestIDMiddleware::new().with_simple_uuid())
                 .service(web::resource("/").to(|| async { HttpResponse::Ok().finish() })),
         )
         .await;
@@ -481,7 +492,7 @@ mod lib_actix_web_request_uuid_tests {
         let app = test::init_service(
             App::new()
                 .wrap(
-                    RequestIDMiddleware::new(32)
+                    RequestIDMiddleware::new()
                         .with_simple_uuid()
                         .header_name(custom_header),
                 )
@@ -501,7 +512,7 @@ mod lib_actix_web_request_uuid_tests {
         let app = test::init_service(
             App::new()
                 .wrap(
-                    RequestIDMiddleware::new(32)
+                    RequestIDMiddleware::new()
                         .with_custom_uuid_format(|uuid| format!("req-{}", uuid.simple())),
                 )
                 .service(web::resource("/").to(|| async { HttpResponse::Ok().finish() })),
@@ -524,13 +535,13 @@ mod lib_actix_web_request_uuid_tests {
     #[actix_rt::test]
     #[should_panic(expected = "Request ID length must be greater than 0")]
     async fn test_zero_length_id_panics() {
-        RequestIDMiddleware::new(0);
+        RequestIDMiddleware::new().with_id_length(0);
     }
 
     /// Test thread-local request ID
     #[actix_rt::test]
     async fn test_thread_local_request_id() {
-        let app = test::init_service(App::new().wrap(RequestIDMiddleware::new(36)).service(
+        let app = test::init_service(App::new().wrap(RequestIDMiddleware::new()).service(
             web::resource("/").to(|| async {
                 // Get request ID from thread-local variable
                 let request_id = get_current_request_id().unwrap_or_else(|| "missing".to_string());
@@ -600,7 +611,7 @@ mod lib_actix_web_request_uuid_tests {
     #[actix_rt::test]
     async fn test_from_request_implementation() {
         let app = test::init_service(
-            App::new().wrap(RequestIDMiddleware::new(36)).service(
+            App::new().wrap(RequestIDMiddleware::new()).service(
                 web::resource("/")
                     .to(|req_id: RequestID| async move { HttpResponse::Ok().body(req_id.inner) }),
             ),
@@ -622,7 +633,7 @@ mod lib_actix_web_request_uuid_tests {
         let custom_id = "custom-generated-id";
         let app = test::init_service(
             App::new()
-                .wrap(RequestIDMiddleware::new(36).generator(move || custom_id.to_string()))
+                .wrap(RequestIDMiddleware::new().generator(move || custom_id.to_string()))
                 .service(web::resource("/").to(|| async { HttpResponse::Ok().finish() })),
         )
         .await;
@@ -682,7 +693,7 @@ mod lib_actix_web_request_uuid_tests {
     async fn test_existing_request_id_reused() {
         let existing_id = "pre-existing-request-id";
 
-        let app = test::init_service(App::new().wrap(RequestIDMiddleware::new(36)).service(
+        let app = test::init_service(App::new().wrap(RequestIDMiddleware::new()).service(
             web::resource("/").to(move |req: HttpRequest| async move {
                 // Pre-set a request ID in extensions
                 req.extensions_mut().insert(RequestID {
@@ -716,7 +727,7 @@ mod lib_actix_web_request_uuid_tests {
     /// Test multiple concurrent requests have different IDs
     #[actix_rt::test]
     async fn test_concurrent_requests_different_ids() {
-        let app = test::init_service(App::new().wrap(RequestIDMiddleware::new(36)).service(
+        let app = test::init_service(App::new().wrap(RequestIDMiddleware::new()).service(
             web::resource("/").to(|| async {
                 let id = get_current_request_id().unwrap();
                 HttpResponse::Ok().body(id)
@@ -747,7 +758,7 @@ mod lib_actix_web_request_uuid_tests {
         // Test with length longer than UUID (should return full UUID)
         let app = test::init_service(
             App::new()
-                .wrap(RequestIDMiddleware::new(100))
+                .wrap(RequestIDMiddleware::new().with_id_length(100))
                 .service(web::resource("/").to(|| async { HttpResponse::Ok().finish() })),
         )
         .await;
