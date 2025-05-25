@@ -7,6 +7,10 @@ A Rust library to add request ID functionality with the actix-web framework.
 [![Documentation](https://docs.rs/actix-web-request-uuid/badge.svg)](https://docs.rs/actix-web-request-uuid)
 [![License](https://img.shields.io/crates/l/actix-web-request-uuid)](https://github.com/YusukeYoshida8849/actix-web-request-uuid#license)
 
+## Japanese
+
+Please refer to [README.en.md](./README.ja.md) .
+
 ## Installation
 
 Add this to your `Cargo.toml`:
