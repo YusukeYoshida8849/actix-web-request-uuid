@@ -28,7 +28,7 @@ use actix_web_request_uuid::RequestIDMiddlware;
 async fn main() -> std::io::Result<()> {
     HttpServer::new(
         || App::new()
-            .wrap(RequestIDMiddleware::new(36))
+            .wrap(RequestIDMiddleware::new())
             .service(web::resource("/").to(|| HttpResponse::Ok())))
         .bind("127.0.0.1:59880")?
         .run()
@@ -67,6 +67,7 @@ async fn my_service() -> Result<(), Error> {
 #### 2. **豊富なカスタマイズオプション**
 元のプロジェクトはUUID v4のみでしたが、多様な形式をサポート：
 
+- **ID長変更**: `with_id_length()` - 1文字から36文字までの任意の長さを指定
 - **フルUUID形式**: `with_full_uuid()` - 36文字、ハイフン付き
 - **シンプルUUID形式**: `with_simple_uuid()` - 32文字、ハイフンなし
 - **カスタム形式**: `with_custom_uuid_format()` - 独自のフォーマッター
@@ -75,7 +76,7 @@ async fn my_service() -> Result<(), Error> {
 
 ```rust
 // 設定例
-let middleware = RequestIDMiddleware::new(32)
+let middleware = RequestIDMiddleware::new()
     .with_simple_uuid()
     .header_name("X-Request-ID")
     .generator(|| format!("req-{}", Uuid::new_v4().simple()));
