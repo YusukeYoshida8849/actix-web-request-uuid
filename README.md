@@ -9,7 +9,7 @@ A Rust library to add request ID functionality with the actix-web framework.
 
 ## Japanese
 
-Please refer to [README.en.md](./README.ja.md) .
+Please refer to [README.ja.md](./README.ja.md) .
 
 ## Installation
 
